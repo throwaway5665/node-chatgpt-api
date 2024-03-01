@@ -121,7 +121,7 @@ export default class BingAIClient {
                 createdAt: Date.now(),
             };
 
-            // TODO: limit token usage
+            // Should add limit for token usage
             const previousCachedMessages = this.constructor.getMessagesForConversation(conversation.messages, parentMessageId)
                 .map(conversationMessage => ({
                     text: conversationMessage.message,
@@ -520,6 +520,12 @@ export default class BingAIClient {
                 break;
             case 'fitness':
                 personaString = 'flux_fitness_helper_v14';
+                break;
+            case 'shopping':
+                personaString = 'ai_persona_personal_shopper_gpt_v3';
+                break;
+            case 'shopping_copilot':
+                personaString = 'flux_shopping_copilot_naturalv1_sahara_reasonv2';
                 break;
             case 'copilot':
                 personaString = 'fluxcopilot';
