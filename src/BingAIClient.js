@@ -63,23 +63,23 @@ export default class BingAIClient {
         }
 
         let {
-            jailbreakConversationId = false, // set to `true` for the first message to enable jailbreak mode
+            accountType,
+            clientId,
             conversationId,
             conversationSignature,
-            clientId,
+            jailbreakConversationId = false,
             plugins,
-            accountType,
-            systemMessage,
         } = opts;
-        systemMessage = systemMessage || this.options.systemMessage;
 
         const {
-            invocationId = 0,
-            toneStyle,
-            persona,
-            context = jailbreakConversationId ? process.env.CONTEXT : null,
-            parentMessageId = jailbreakConversationId === true ? crypto.randomUUID() : null,
             abortController = new AbortController(),
+            context = jailbreakConversationId ? process.env.CONTEXT : null,
+            invocationId = 0,
+            parentMessageId = jailbreakConversationId === true ? crypto.randomUUID() : null,
+            persona,
+            personalization,
+            systemMessage = this.options.systemMessage,
+            toneStyle,
         } = opts;
 
         if (jailbreakConversationId || !conversationSignature || !conversationId || !clientId) {
@@ -177,20 +177,21 @@ export default class BingAIClient {
         plugins = BingAIClient.#resolvePlugins(plugins);
         accountType = BingAIClient.#resolveAccountType(accountType);
         const webSocketParameters = {
-            message,
-            invocationId,
-            jailbreakConversationId,
-            conversationSignature,
+            accountType,
             clientId,
             conversationId,
-            toneStyle,
+            conversationSignature,
             ...imageUploadResult && { imageUploadResult },
-            plugins,
-            useBase64: opts.useBase64,
-            useUserSuffixMessage: opts.useUserSuffixMessage,
+            invocationId,
+            jailbreakConversationId,
+            message,
             noSearch,
             persona,
-            accountType,
+            personalization,
+            plugins,
+            toneStyle,
+            useBase64: opts.useBase64,
+            useUserSuffixMessage: opts.useUserSuffixMessage,
         };
 
         const ws = await this.#createWebSocketConnection(conversationSignature);
@@ -369,20 +370,21 @@ export default class BingAIClient {
      */
     static #createUserWebsocketRequest(webSocketParameters) {
         const {
-            message,
-            invocationId,
-            jailbreakConversationId,
-            conversationSignature,
+            accountType,
             clientId,
             conversationId,
-            toneStyle,
-            imageUploadResult = undefined,
-            plugins,
-            useBase64,
-            useUserSuffixMessage,
+            conversationSignature,
+            imageUploadResult,
+            invocationId,
+            jailbreakConversationId,
+            message,
             noSearch,
             persona,
-            accountType,
+            personalization,
+            plugins,
+            toneStyle,
+            useBase64,
+            useUserSuffixMessage,
         } = webSocketParameters;
 
         const imageBaseURL = 'https://www.bing.com/images/blob?bcid=';
@@ -412,9 +414,7 @@ export default class BingAIClient {
                         'deepleo',
                         'disable_emoji_spoken_text',
                         'responsible_ai_policy_235',
-                        // 'enablemm',
                         'dv3sugg',
-                        // 'autosave',
                         'uquopt',
                         'bicfluxv2',
                         'langdtwb',
@@ -422,6 +422,13 @@ export default class BingAIClient {
                         'eredirecturl',
                         ...(toneStyle === 'turbo' && accountType === 'free' ? ['gpt4tmncnp'] : []),
                         ...(personaString !== '' ? [personaString] : []),
+                        ...(personalization === true ? [
+                            'enable_user_consent',
+                            'enablemm',
+                            'fluxmemcst',
+                            'up4resp14cst',
+                            'uprofdeuv1',
+                            'uprofupdv2'] : []),
                         ...(noSearch !== undefined ? [noSearch] : []),
                         ...pluginOptionSets,
                     ],
@@ -441,13 +448,19 @@ export default class BingAIClient {
                     sliceIds: [],
                     plugins: pluginIds,
                     traceId: genRanHex(32),
+                    conversationHistoryOptionsSets: personalization === true ? [
+                        'autosave',
+                        'savemem',
+                        'uprofupd',
+                        'uprofgen',
+                    ] : [],
                     gptId: persona,
                     isStartOfSession: invocationId === 0,
                     message: {
                         ...imageUploadResult
-                        && { imageUrl: `${imageBaseURL}${imageUploadResult.blobId}` },
+                            && { imageUrl: `${imageBaseURL}${imageUploadResult.blobId}` },
                         ...imageUploadResult
-                        && { originalImageUrl: `${imageBaseURL}${imageUploadResult.blobId}` },
+                            && { originalImageUrl: `${imageBaseURL}${imageUploadResult.blobId}` },
                         author: 'user',
                         text: useUserSuffixMessage ? userMessageSuffix : message,
                         messageType: 'Chat',
@@ -494,7 +507,7 @@ export default class BingAIClient {
      * @returns {String} Technical name of the persona to use.
      */
     static #resolvePersona(persona) {
-        let personaString = '';
+        let personaString;
         switch (persona) {
             case 'designer':
                 personaString = 'ai_persona_designer_gpt';
