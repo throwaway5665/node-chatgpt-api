@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 
-dotenv.config('.env');
+dotenv.config({ path: '.env' });
 
 export default {
     // Options for the Keyv cache, see https://www.npmjs.com/package/keyv.
@@ -79,32 +79,35 @@ export default {
         debug: false,
     },
     localLLMClient: {
-        // The host url for the Local LLM. For example 'localhost', '192.168.X.XX' or 'myapihoster.com'
-        host: process.env.LOCAL_LLM_API_HOST || 'localhost',
-        // The port for the Local LLM API server.
-        port: process.env.LOCAL_LLM_API_PORT || '3002',
-        // The system message or prompt prefix that should be shown to the model as the first message.
-        systemMessage: process.env.LOCAL_LLM_SYSTEM_MESSAGE || 'You are an AI assistant. Write the AI\'s next reply in a chat between the user and the AI. Write a single reply only.',
         // The maximum context tokens the model supports. See your model card or underlying model card as a reference.
         context_tokens: process.env.LOCAL_LLM_MAX_TOKENS || 4096,
-        // The prefix a user message should have. See your model card or underlying model card as a reference.
-        startToken: process.env.LOCAL_LLM_START_TOKEN || '### Instruction: ',
         // The suffix a user message should have. See your model card or underlying model card as a reference.
         endToken: process.env.LOCAL_LLM_END_TOKEN || '### Response: ',
-        // Whether the reponse should be streamed, so being output token by token.
+        // Positive values penalize new tokens based on their existing frequency in the text so far,
+        // decreasing the model's likelihood to repeat the same line verbatim.
+        frequency_penalty: process.env.LOCAL_LLM_FREQUENCY_PENALTY,
+        // The host url for the Local LLM. For example 'localhost', '192.168.X.XX' or 'myapihoster.com'
+        host: process.env.LOCAL_LLM_API_HOST || 'localhost',
+        // The maximum tokens the model should generate per response. Will effectively truncate output message.
+        max_tokens: process.env.LOCAL_LLM_MAX_TOKENS || -1,
+        // The port for the Local LLM API server.
+        port: process.env.LOCAL_LLM_API_PORT || '3002',
+        // Positive values penalize new tokens based on whether they appear in the text so far,
+        // increasing the model's likelihood to talk about new topics.
+        presence_penalty: process.env.LOCAL_LLM_PRESENCE_PENALTY,
+        // The prefix a user message should have. See your model card or underlying model card as a reference.
+        startToken: process.env.LOCAL_LLM_START_TOKEN || '### Instruction: ',
+        // The token at which to stop generating. See your model card or underlying model card as a reference.
+        stop: process.env.LOCAL_LLM_STOP_TOKEN || ['### Instruction: '],
+        // Whether the response should be streamed, so being output token by token.
         stream: process.env.LOCAL_LLM_STREAM || true,
+        // The system message or prompt prefix that should be shown to the model as the first message.
+        systemMessage: process.env.LOCAL_LLM_SYSTEM_MESSAGE
+            || 'You are an AI assistant. Write the AI\'s next reply in a chat between the user and the AI. Write a single reply only.',
         // Determines the randomness of replies.
         temperature: process.env.LOCAL_LLM_TEMPERATURE || 0.8,
         // Determines the randomness of replies.
         top_p: process.env.LOCAL_LLM_TOP_P,
-        // Makes model more or less likely to use similar tokens in the same conversation.
-        presence_penalty: process.env.LOCAL_LLM_PRESENCE_PENALTY || 1.18,
-        // Makes model more or less likely to use similar tokens in the same conversation.
-        frequency_penalty: process.env.LOCAL_LLM_FREQUENCY_PENALTY,
-        // The maximum tokens the model should generate per response.
-        max_tokens: process.env.LOCAL_LLM_MAX_TOKENS || 500,
-        // The token at which to stop generating. See your model card or underlying model card as a reference.
-        stop: process.env.LOCAL_LLM_STOP_TOKEN || ['### Instruction: '],
         // (Optional) Set to true to enable `console.debug()` logging
         debug: false,
     },

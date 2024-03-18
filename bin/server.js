@@ -3,32 +3,12 @@ import fastify from 'fastify';
 import cors from '@fastify/cors';
 import { FastifySSEPlugin } from '@waylaidwanderer/fastify-sse-v2';
 import fs from 'fs';
-import { pathToFileURL } from 'url';
 import { KeyvFile } from 'keyv-file';
-import dotenv from 'dotenv';
 import ChatGPTClient from '../src/ChatGPTClient.js';
 import ChatGPTBrowserClient from '../src/ChatGPTBrowserClient.js';
 import BingAIClient from '../src/BingAIClient.js';
 import LocalLLMClient from '../src/LocalLLMClient.js';
-
-dotenv.config('.env');
-
-const arg = process.argv.find(_arg => _arg.startsWith('--settings'));
-const path = arg?.split('=')[1] ?? './settings.js';
-
-let settings;
-if (fs.existsSync(path)) {
-    // get the full path
-    const fullPath = fs.realpathSync(path);
-    settings = (await import(pathToFileURL(fullPath).toString())).default;
-} else {
-    if (arg) {
-        console.error('Error: the file specified by the --settings parameter does not exist.');
-    } else {
-        console.error('Error: the settings.js file does not exist.');
-    }
-    process.exit(1);
-}
+import settings from '../settings.js';
 
 if (settings.storageFilePath && !settings.cacheOptions.store) {
     // make the directory and file if they don't exist

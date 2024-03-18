@@ -2,7 +2,6 @@ import './fetch-polyfill.js';
 import crypto from 'crypto';
 import Keyv from 'keyv';
 import { fetchEventSource } from '@waylaidwanderer/fetch-event-source';
-import { Agent } from 'undici';
 
 export default class LocalLLMClient {
     constructor(
@@ -22,21 +21,22 @@ export default class LocalLLMClient {
     #setOptions(options) {
         if (!this.options) {
             this.options = {
-                host: options.host || 'localhost',
-                port: options.port || '3002',
-                systemMessage: options.systemMessage || 'You are an AI assistant. Write the AI\'s next reply in a chat between the user and the AI. Write a single reply only.',
-                context_tokens: options.context_tokens || 4096,
-                startToken: options.startToken || '### Instruction: ',
-                endToken: options.endToken || '### Response: ',
+                context_tokens: options.context_tokens,
+                endToken: options.endToken,
+                host: options.host,
+                port: options.port,
+                startToken: options.startToken,
+                systemMessage: options.systemMessage,
                 modelOptions: {
-                    messages: [],
-                    stream: options.stream || true,
-                    temperature: options.temperature || 0.8,
-                    top_p: options.top_p,
-                    presence_penalty: options.presence_penalty || 1.18,
                     frequency_penalty: options.frequency_penalty,
-                    max_tokens: options.max_tokens || 500,
-                    stop: options.stop || ['### Instruction: '],
+                    max_tokens: options.max_tokens,
+                    messages: [],
+                    presence_penalty: options.presence_penalty,
+                    repeat_penalty: options.repeat_penalty,
+                    stream: options.stream,
+                    stop: options.stop,
+                    temperature: options.temperature,
+                    top_p: options.top_p,
                 },
             };
         } else {
@@ -74,7 +74,7 @@ export default class LocalLLMClient {
             conversation = {
                 messages: [{
                     id: parentMessageId,
-                    parentMessageId: null,
+                    parentMessageId: '',
                     role: 'system',
                     message: this.options.systemMessage,
                 }],
@@ -93,7 +93,7 @@ export default class LocalLLMClient {
             message,
         };
         conversation.messages.push(userMessage);
-        this.options.modelOptions.messages = await this.#buildPrompt(conversation.messages, userMessage);
+        this.options.modelOptions.messages = this.#buildPrompt(conversation.messages, userMessage);
         let reply = '';
         let result = null;
         if (typeof messageOptions.onProgress === 'function') {
@@ -155,14 +155,14 @@ export default class LocalLLMClient {
 
     /**
      * Refreshes the messages in the modelOptions to contain all previous messages and the userMessage.
-     * @param {Array.{id: String, parentMessageId: String, role: String, message: String}} messages
+     * @param {Array.<{id: String, parentMessageId: String, role: String, message: String}>} messages
      * Array containing all messages up to this point.
      * @param {{id: String, parentMessageId: String, role: String, message: String}} userMessage
      * Single message sent by the user.
-     * @returns {Array.{id: String, parentMessageId: String, role: String, message: String}}
+     * @returns {Array.<{id: String, parentMessageId: String, role: String, content: String}>}
      * New message array to replace the current one in the modelOptions with.
      */
-    async #buildPrompt(messages, userMessage) {
+    #buildPrompt(messages, userMessage) {
         let orderedMessages = LocalLLMClient.#getMessagesForConversation(messages, userMessage.id);
         // Case for when the first message gets regenerated.
         if (orderedMessages.length === 1) {
@@ -175,9 +175,10 @@ export default class LocalLLMClient {
             });
             orderedMessages[1].parentMessageId = systemMessageId;
         }
-        messages = orderedMessages;
 
         orderedMessages = orderedMessages.map(message => ({
+            id: message.id,
+            parentMessageId: message.parentMessageId,
             role: message.role,
             content: message.message,
         }));
@@ -233,10 +234,6 @@ export default class LocalLLMClient {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(this.options.modelOptions),
-            dispatcher: new Agent({
-                bodyTimeout: 0,
-                headersTimeout: 0,
-            }),
         };
 
         if (this.options.headers) {
