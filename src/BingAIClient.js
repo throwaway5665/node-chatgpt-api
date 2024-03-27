@@ -509,17 +509,20 @@ export default class BingAIClient {
     static #resolvePersona(persona) {
         let personaString;
         switch (persona) {
-            case 'designer':
-                personaString = 'ai_persona_designer_gpt';
-                break;
-            case 'travel':
-                personaString = 'flux_vacation_planning_helper_v14';
-                break;
             case 'cooking':
                 personaString = 'flux_cooking_helper_v14';
                 break;
+            case 'copilot':
+                personaString = 'fluxcopilot';
+                break;
+            case 'designer':
+                personaString = 'ai_persona_designer_gpt';
+                break;
             case 'fitness':
                 personaString = 'flux_fitness_helper_v14';
+                break;
+            case 'mica':
+                personaString = 'animationfoxgpt';
                 break;
             case 'shopping':
                 personaString = 'ai_persona_personal_shopper_gpt_v3';
@@ -527,11 +530,11 @@ export default class BingAIClient {
             case 'shopping_copilot':
                 personaString = 'flux_shopping_copilot_naturalv1_sahara_reasonv2';
                 break;
-            case 'copilot':
-                personaString = 'fluxcopilot';
-                break;
             case 'sydney':
                 personaString = 'fluxsydney';
+                break;
+            case 'travel':
+                personaString = 'flux_vacation_planning_helper_v14';
                 break;
             default:
                 personaString = '';
