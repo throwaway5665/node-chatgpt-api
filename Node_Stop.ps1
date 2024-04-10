@@ -1,1 +1,0 @@
-taskkill /F /IM node.exe > $null 2>&1

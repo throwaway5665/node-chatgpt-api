@@ -3,12 +3,28 @@ import fastify from 'fastify';
 import cors from '@fastify/cors';
 import { FastifySSEPlugin } from '@waylaidwanderer/fastify-sse-v2';
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 import { KeyvFile } from 'keyv-file';
 import ChatGPTClient from '../src/ChatGPTClient.js';
 import ChatGPTBrowserClient from '../src/ChatGPTBrowserClient.js';
 import BingAIClient from '../src/BingAIClient.js';
-import LocalLLMClient from '../src/LocalLLMClient.js';
-import settings from '../settings.js';
+
+const arg = process.argv.find(_arg => _arg.startsWith('--settings'));
+const path = arg?.split('=')[1] ?? './settings.js';
+
+let settings;
+if (fs.existsSync(path)) {
+    // get the full path
+    const fullPath = fs.realpathSync(path);
+    settings = (await import(pathToFileURL(fullPath).toString())).default;
+} else {
+    if (arg) {
+        console.error('Error: the file specified by the --settings parameter does not exist.');
+    } else {
+        console.error('Error: the settings.js file does not exist.');
+    }
+    process.exit(1);
+}
 
 if (settings.storageFilePath && !settings.cacheOptions.store) {
     // make the directory and file if they don't exist
@@ -44,11 +60,6 @@ server.post('/conversation', async (request, reply) => {
             abortController.abort();
         }
     });
-    if (process.env.USE_PASSWORD === 'true') {
-        if (process.env.PASSWORD !== body.password) {
-            return reply.code(403).send({ error: 'Include the correct password in your request.' });
-        }
-    }
 
     let onProgress;
     if (body.stream === true) {
@@ -76,61 +87,36 @@ server.post('/conversation', async (request, reply) => {
             // noinspection ExceptionCaughtLocallyJS
             throw invalidError;
         }
-        let clientToUseForMessage = body.clientOptions.clientToUse;
+
+        let clientToUseForMessage = clientToUse;
         const clientOptions = filterClientOptions(body.clientOptions, clientToUseForMessage);
         if (clientOptions && clientOptions.clientToUse) {
             clientToUseForMessage = clientOptions.clientToUse;
             delete clientOptions.clientToUse;
         }
 
+        let { shouldGenerateTitle } = body;
+        if (typeof shouldGenerateTitle !== 'boolean') {
+            shouldGenerateTitle = settings.apiOptions?.generateTitles || false;
+        }
+
         const messageClient = getClient(clientToUseForMessage);
-        const {
-            accountType,
-            clientId,
-            context,
-            conversationSignature,
-            imageBase64,
-            imageURL,
-            invocationId,
-            jailbreakConversationId,
-            persona,
-            personalization,
-            plugins,
-            shouldGenerateTitle,
-            showSuggestions,
-            systemMessage,
-            toneStyle,
-            useBase64,
-            useUserSuffixMessage,
-        } = body;
-        const messageOptions = {
+
+        result = await messageClient.sendMessage(body.message, {
+            jailbreakConversationId: body.jailbreakConversationId,
             conversationId: body.conversationId ? body.conversationId.toString() : undefined,
             parentMessageId: body.parentMessageId ? body.parentMessageId.toString() : undefined,
+            systemMessage: body.systemMessage,
+            context: body.context,
+            conversationSignature: body.conversationSignature,
+            clientId: body.clientId,
+            invocationId: body.invocationId,
+            shouldGenerateTitle, // only used for ChatGPTClient
+            toneStyle: body.toneStyle,
             clientOptions,
-            ...(clientToUseForMessage === 'chatgpt'
-                || clientToUseForMessage === 'bing' ? { context } : {}),
-            ...(clientToUseForMessage === 'chatgpt' && { shouldGenerateTitle }),
-            ...(clientToUseForMessage === 'bing' ? {
-                accountType,
-                clientId,
-                conversationSignature,
-                imageBase64,
-                imageURL,
-                invocationId,
-                jailbreakConversationId,
-                persona,
-                personalization,
-                plugins,
-                showSuggestions,
-                systemMessage,
-                toneStyle,
-                useBase64,
-                useUserSuffixMessage,
-            } : {}),
             onProgress,
             abortController,
-        };
-        result = await messageClient.sendMessage(body.message, messageOptions);
+        });
     } catch (e) {
         error = e;
     }
@@ -170,40 +156,8 @@ server.post('/conversation', async (request, reply) => {
     return reply.code(code).send({ error: message });
 });
 
-server.delete('/conversation/:cacheKey', (request, reply) => {
-    const { cacheKey } = request.params;
-    const error = deleteConversation(cacheKey);
-    if (error) {
-        reply.code(500).send(error);
-    } else {
-        reply.code(200).send('Conversation deleted');
-    }
-});
-
-function deleteConversation(cacheKey) {
-    const cache = JSON.parse(fs.readFileSync('cache.json', 'utf8'));
-    const cacheArray = cache.cache;
-    let index = -1;
-    let result;
-    for (let i = 0; i < cacheArray.length; i++) {
-        if (cacheArray[i][0] === cacheKey) {
-            index = i;
-            break;
-        }
-    }
-
-    try {
-        if (index === -1) throw new Error('Message not found');
-        cacheArray.splice(index, 1);
-        fs.writeFileSync('cache.json', JSON.stringify(cache), 'utf8');
-    } catch (err) {
-        result = err;
-    }
-    return result;
-}
-
 server.listen({
-    port: process.env?.PORT || settings.apiOptions?.port || settings.port || 3000,
+    port: settings.apiOptions?.port || settings.port || 3000,
     host: settings.apiOptions?.host || 'localhost',
 }, (error) => {
     if (error) {
@@ -229,11 +183,6 @@ function getClient(clientToUseForMessage) {
             return new ChatGPTClient(
                 settings.openaiApiKey || settings.chatGptClient.openaiApiKey,
                 settings.chatGptClient,
-                settings.cacheOptions,
-            );
-        case 'localLLM':
-            return new LocalLLMClient(
-                settings.localLLMClient,
                 settings.cacheOptions,
             );
         default:

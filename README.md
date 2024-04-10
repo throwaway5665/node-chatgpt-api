@@ -84,74 +84,6 @@ Discord user @pig#8932 has found a working `text-chat-davinci-002` model, `text-
 </details>
 </details>
 
-# Bing Chat API with Pandora
-This section will highlight the features, prerequisites and usage of the Bing Chat API in conjunction with the PandoraAI frontend. For other usages see the section of the original Repo further below.
-
-## Preamble
-The content described mostly applies to this specific fork, as the main repo isn't maintained as much. Be sure to use the forked repos, if you intend to use all the following features.
-
-## Features
-This section will describe the features compared to the official Bing Chat implementations by Microsoft.  
-One of the main difference is the implementation of a "jailbreak" mode.  Which has the following features:
-- Chat for more than 30 turns
-- Never receive "disengagement" (Chat ended by AI)
-- Never receive "apologies" (AI is forced to redact message and answer with an apology)*
-- Use a custom system message to redefine the AI's behavior**
-- Include a context message to include some more information about you or the AI (you can also include it in the system message)
-- Disable or enable suggestions
-- Use all plugins in  a single chat instead of 3.
-- Communicate in base64 (answer quality will deteriorate)  
-\* Because the second layer moderation can't be circumvented, responses may get cut off. You may use base64 to circumvent that issue, but the quality of the answer will suffer.  
-\** Because the original system message is always included, you have to negate it in your custom system message. See the `.env.example` for an example system message.
-
-
-
-## Prerequisites
-- Node.js 18+
-- Microsoft account (optional, but cookie lasts longer)
-
-## Getting started
-1. Copy this repo.
-2. Copy the [PandoraAI fork](https://github.com/Richard-Weiss/PandoraAI).
-3. open the `.env.example` file in the node-chatgpt-api folder and fill the bolded entries.
-   1. API_HOST: Through which IP address or URL the API is reachable. If you leave the default, you can only use it on your own client. If you use a local IPv4 address, you can use it from other devices in your network etc.
-   2. **BING_COOKIE**: The cookie that's used to retrieve a request. You can look at this [repo](https://github.com/vsakkas/sydney.py#prerequisites) for instruction on how to retrieve it. Make sure your cookie contains the keys `MUID`, `_U` and `_RwBf` to be able to use all features, including plugins.
-   3. CONTEXT: You can include additional information about yourself or the AI here.
-   4. **NODE_GPT_PATH**: This is used for the `start` powershell script. Enter the absolute path of the `node-chatgpt-api` folder.
-   5. **PANDORA_PATH**: Same as above, but enter the `PandoraAI` folder's absolute path.
-   6. PASSWORD: Very crude authentication. Please ignore.
-   7. PORT: The port the server listens to. Can be left to the default value.
-   8. SHOW_SUGGESTIONS: Enable or disable the three 3 suggestions that are displayed.
-   9. **SYSTEM_MESSAGE**: Defines how the AI should behave. Gets overridden by the value entered in PandoraAI.
-   10. USE_BASE64: Set to `true` for the AI to only talk in base64.
-   11. USE_PASSWORD: Can be ignored and left to `false`.
-4. Rename the file from `.env.example` to `.env`.
-5. Navigate to the `PandoraAI` folder.
-6. Open the `.env.example` file and change the `NUXT_PUBLIC_API_BASE_URL` value to your host and port if you changed it.
-7. Rename the file to `.env`.
-8. Navigate to the `node-chatgpt-api` folder and run the `Node-GPT_And_Pandora_Install.ps1` file. You can also run npm install in each folder manually.
-9. Run the `Node-GPT_And_Pandora_Run.ps1` file to start both servers.
-10. Open a browser and enter the url from the `NUXT_PUBLIC_API_BASE_URL` value.
-
-## Conversation endpoint parameters
-This section will elaborate the parameters that are specific to Bing Chat that are able to be sent using the request body of the conversation endpoint.  
-- `clientId`: Empty for first request and used for subsequent requests
-- `conversationSignature`: Empty for first request and used for subsequent requests
-- `conversationId`: Empty for first request and used for subsequent requests
-- `jailbreakConversationId`: Set to `true` for first request to enable jailbreak mode and used for subsequent requests
-- `toneStyle`: The mode Bing should use. Valid values are `["creative", "turbo", "balanced", "precise"]`
-- `invocationId`: The index of the message. Empty for first message and gets incremented by one for each ended user turn.
-- `imageBase64`: (optional) base64 string of an image bing should analyze
-- `imageURL`: (optional) URL of an image that Bing should analyze. Has precedence over imageBase64 if both parameters are passed.
-- `systemMessage`: Used when jailbreak mode is enabled. Adds another system message to the AI.
-- `showSuggestions`: Toggles the three suggestions by the suggestion AI to be returned
-- `useBase64`: Adds a section to the system message to tell the AI to use base64
-- `useUserSuffixMessage`: Adds a message by the user reading `Continue the message in the current Context` which will prevent the moderation filter to trigger for user messages, but may confuse the AI
-- `plugins`: Enables the plugins in the array with the value `true`. See the `#resolvePlugins` method in the `BingAIClient.js` class for valid plugins
-- `persona`: Enables a Microsoft custom GPT. See the `#resolvePersona` method in the `BingAIClient.js` class for valid personas
-- `accountType`: The type of account the cookie is associated with. Valid values are `free` and `pro`. Defaults to `free` if not set.
-
-
 # ChatGPT API
 
 > A client implementation for ChatGPT and Bing AI. Available as a Node.js module, REST API server, and CLI app.
@@ -162,37 +94,19 @@ This section will elaborate the parameters that are specific to Bing Chat that a
 [![GitHub Repo stars](https://img.shields.io/github/stars/waylaidwanderer/node-chatgpt-api)](https://github.com/waylaidwanderer/node-chatgpt-api/)
 
 # Table of Contents
-- [Bing Chat API with Pandora](#bing-chat-api-with-pandora)
-  - [Preamble](#preamble)
-  - [Features](#features)
-  - [Prerequisites](#prerequisites)
-  - [Getting started](#getting-started)
-  - [Conversation endpoint parameters](#conversation-endpoint-parameters)
-- [ChatGPT API](#chatgpt-api)
-- [Table of Contents](#table-of-contents)
-  - [Features](#features-1)
-  - [Getting Started](#getting-started-1)
-    - [Prerequisites](#prerequisites-1)
-  - [Usage](#usage)
-    - [Module](#module)
-    - [API Server](#api-server)
-      - [Endpoints](#endpoints)
-      - [Usage](#usage-1)
-      - [Notes](#notes)
-    - [CLI](#cli)
-      - [Setup](#setup)
-      - [Usage](#usage-2)
-  - [Using a Reverse Proxy](#using-a-reverse-proxy)
-      - [Instructions](#instructions)
-      - [Notes](#notes-1)
-      - [Instructions](#instructions-1)
-      - [Notes](#notes-2)
-  - [Projects](#projects)
-  - [Web Client](#web-client)
-  - [Caveats](#caveats)
-    - [Regarding `ChatGPTClient`](#regarding-chatgptclient)
-  - [Contributing](#contributing)
-  - [License](#license)
+   * [Features](#features)
+   * [Getting Started](#getting-started)
+      * [Prerequisites](#prerequisites)
+      * [Usage](#usage)
+         * [Module](#module)
+         * [API Server](#api-server)
+         * [CLI](#cli)
+      * [Using a Reverse Proxy](#using-a-reverse-proxy)
+   * [Projects](#projects)
+   * [Web Client](#web-client)
+   * [Caveats](#caveats)
+   * [Contributing](#contributing)
+   * [License](#license)
 
 ## Features
 - Includes an API server (with Docker support) you can run to use ChatGPT in non-Node.js applications.
@@ -210,7 +124,6 @@ This section will elaborate the parameters that are specific to Bing Chat that a
   - Includes a built-in jailbreak you can activate which enables unlimited chat messages per conversation, unlimited messages per day, and brings Sydney back. 😊
 - `ChatGPTBrowserClient`: support for the official ChatGPT website, using a reverse proxy server for a Cloudflare bypass.
   - **There may be a high chance of your account being banned if you continue to automate chat.openai.com.** Continue doing so at your own risk.
-- `LocalLLMClient`: support for using custom LLMs hosted on a server. For example you can use LM Studio to load a custom LLM and open a server. Uses the `/v1/chat/completions` endpoint by default.
 
 ## Getting Started
 
@@ -241,11 +154,6 @@ See [`demos/use-client.js`](demos/use-client.js).
 <summary><strong>ChatGPTBrowserClient</strong></summary>
 
 See [`demos/use-browser-client.js`](demos/use-browser-client.js).
-</details>
-<details open>
-<summary><strong>LocalLLMClient</strong></summary>
-
-See [`demos/use-browser-client.js`](demos/use-localLLM-client.js).
 </details>
 
 ### API Server
